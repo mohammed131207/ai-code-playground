@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Code Playground</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0f12;
+  --surface: #161a1f;
+  --surface2: #1e2329;
+  --border: #2a2f38;
+  --accent: #4ade80;
+  --accent-dim: #16532d;
+  --blue-dim: #1e3a5f;
+  --text: #e8eaed;
+  --text-muted: #6b7280;
+  --text-dim: #374151;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Tajawal', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+#header-left { display: flex; align-items: center; gap: 12px; }
+#logo {
+  width: 30px; height: 30px;
+  background: var(--accent);
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+}
+#logo svg { width: 16px; height: 16px; }
+#app-name { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+#model-badge {
+  font-size: 11px; font-family: var(--mono);
+  padding: 3px 8px;
+  background: var(--accent-dim); color: var(--accent);
+  border-radius: 4px; border: 1px solid #166534;
+}
+#status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+#header-right { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); font-family: var(--mono); }
+#main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  overflow: hidden;
+}
+#chat-panel {
+  display: flex; flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  overflow: hidden;
+}
+#chat-header {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px; color: var(--text-muted);
+  font-family: var(--mono); text-transform: uppercase; letter-spacing: 1px;
+}
+#messages {
+  flex: 1; overflow-y: auto;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.msg {
+  max-width: 92%; padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px; line-height: 1.65;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+.msg.user {
+  align-self: flex-end;
+  background: var(--blue-dim); color: #bfdbfe;
+  border: 1px solid #1e40af; border-bottom-left-radius: 3px;
+}
+.msg.ai {
+  align-self: flex-start;
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border); border-bottom-right-radius: 3px;
+}
+.thinking { color: var(--text-muted); font-style: italic; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.dot-anim { display: flex; gap: 4px; }
+.dot-anim span {
+  width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+  animation: bounce 1.2s infinite;
+}
+.dot-anim span:nth-child(2){animation-delay:.2s}
+.dot-anim span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+#suggestions {
+  display: flex; gap: 6px; padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  overflow-x: auto; scrollbar-width: none; flex-shrink: 0;
+}
+.sug {
+  white-space: nowrap; font-size: 12px;
+  padding: 5px 12px;
+  border: 1px solid var(--border); border-radius: 20px;
+  cursor: pointer; color: var(--text-muted); background: var(--surface2);
+  transition: all 0.15s; flex-shrink: 0;
+}
+.sug:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+#input-area { padding: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+#prompt {
+  width: 100%; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: var(--sans); font-size: 14px;
+  padding: 10px 14px; resize: none; outline: none;
+  min-height: 68px; line-height: 1.6; transition: border-color 0.15s;
+}
+#prompt:focus { border-color: var(--accent); }
+#prompt::placeholder { color: var(--text-dim); }
+#send-row { display: flex; align-items: center; justify-content: space-between; }
+#hint { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
+#send-btn {
+  padding: 8px 20px; background: var(--accent); color: #052e16;
+  border: none; border-radius: 7px;
+  font-size: 13px; font-weight: 700; font-family: var(--sans);
+  cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+}
+#send-btn:hover { opacity: 0.9; }
+#send-btn:active { transform: scale(0.97); }
+#send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+#code-panel { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+#tabs-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border); background: var(--surface); padding: 0 16px; flex-shrink: 0;
+}
+#tabs { display: flex; }
+.tab {
+  padding: 10px 16px; font-size: 12px; font-family: var(--mono);
+  cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; transition: color 0.15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+#lang-pill {
+  font-size: 11px; font-family: var(--mono);
+  padding: 3px 10px; background: var(--surface2);
+  color: var(--text-muted); border-radius: 4px; border: 1px solid var(--border);
+}
+#code-view { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#empty-state {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  color: var(--text-dim); font-size: 13px; gap: 12px; font-family: var(--mono);
+}
+#empty-state svg { opacity: 0.25; }
+#code-editor {
+  flex: 1; font-family: var(--mono); font-size: 13px; line-height: 1.8;
+  padding: 20px; background: var(--bg); color: #a5f3a0;
+  border: none; outline: none; resize: none; overflow: auto;
+  display: none; white-space: pre; tab-size: 2;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+#preview-view { flex: 1; display: none; }
+#preview-frame { width: 100%; height: 100%; border: none; background: white; }
+#toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 16px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0;
+}
+#toolbar-left { display: flex; gap: 8px; align-items: center; }
+#run-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 16px; background: var(--accent-dim); color: var(--accent);
+  border: 1px solid #166534; border-radius: 6px;
+  font-size: 12px; font-family: var(--mono); font-weight: 500; cursor: pointer; transition: background 0.15s;
+}
+#run-btn:hover { background: #14532d; }
+#copy-btn {
+  padding: 6px 14px; background: transparent; color: var(--text-muted);
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 12px; font-family: var(--mono); cursor: pointer; transition: all 0.15s;
+}
+#copy-btn:hover { border-color: var(--text-muted); color: var(--text); }
+#toolbar-status { font-size: 11px; font-family: var(--mono); color: var(--text-dim); }
+#toolbar-status.ok { color: var(--accent); }
+#toolbar-status.err { color: #f87171; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div id="header-left">
+    <div id="logo">
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M3 8h10M8 3l5 5-5 5" stroke="#052e16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div id="app-name">AI Code Playground</div>
+    <div id="model-badge">gpt-4o-mini</div>
+  </div>
+  <div id="header-right">
+    <div id="status-dot"></div>
+    <span>متصل</span>
+  </div>
+</div>
+
+<div id="main">
+  <div id="chat-panel">
+    <div id="chat-header">المحادثة</div>
+    <div id="messages">
+      <div class="msg ai">مرحباً! اطلب أي كود وسيظهر على اليمين مع معاينة فورية. جرب الأمثلة أدناه!</div>
+    </div>
+    <div id="suggestions">
+      <div class="sug" onclick="suggest('اصنع ساعة رقمية')">ساعة رقمية</div>
+      <div class="sug" onclick="suggest('اصنع لعبة Snake')">لعبة Snake</div>
+      <div class="sug" onclick="suggest('اصنع آلة حاسبة')">آلة حاسبة</div>
+      <div class="sug" onclick="suggest('اصنع لعبة Tetris')">لعبة Tetris</div>
+      <div class="sug" onclick="suggest('اصنع مؤقت عد تنازلي')">مؤقت</div>
+      <div class="sug" onclick="suggest('اصنع نموذج تسجيل دخول')">نموذج تسجيل</div>
+    </div>
+    <div id="input-area">
+      <textarea id="prompt" placeholder="اطلب أي كود... مثال: اصنع لعبة Tetris بـ JavaScript"></textarea>
+      <div id="send-row">
+        <span id="hint">Enter للإرسال • Shift+Enter سطر جديد</span>
+        <button id="send-btn" onclick="sendMsg()">إرسال ←</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="code-panel">
+    <div id="tabs-bar">
+      <div id="tabs">
+        <div class="tab active" id="tab-code" onclick="switchTab('code')">الكود</div>
+        <div class="tab" id="tab-preview" onclick="switchTab('preview')">معاينة مباشرة</div>
+      </div>
+      <span id="lang-pill">—</span>
+    </div>
+    <div id="code-view">
+      <div id="empty-state">
+        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+        </svg>
+        <span>اطلب كوداً لتراه هنا</span>
+      </div>
+      <textarea id="code-editor" spellcheck="false"></textarea>
+    </div>
+    <div id="preview-view">
+      <iframe id="preview-frame" sandbox="allow-scripts allow-forms allow-modals"></iframe>
+    </div>
+    <div id="toolbar">
+      <div id="toolbar-left">
+        <button id="run-btn" onclick="runCode()">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><polygon points="2,1 11,6 2,11"/></svg>
+          تشغيل
+        </button>
+        <button id="copy-btn" onclick="copyCode()">نسخ الكود</button>
+      </div>
+      <span id="toolbar-status">جاهز</span>
+    </div>
+  </div>
+</div>
+
+<script>
+var currentCode = '';
+var currentLang = '';
+var history = [];
+
+function suggest(text) {
+  document.getElementById('prompt').value = text + ' بـ HTML و JavaScript، اجعله جميل ومتكامل';
+  sendMsg();
+}
+
+function switchTab(t) {
+  document.getElementById('tab-code').className = 'tab' + (t === 'code' ? ' active' : '');
+  document.getElementById('tab-preview').className = 'tab' + (t === 'preview' ? ' active' : '');
+  document.getElementById('code-view').style.display = t === 'code' ? 'flex' : 'none';
+  document.getElementById('preview-view').style.display = t === 'preview' ? 'flex' : 'none';
+  if (t === 'preview' && currentCode) runCode();
+}
+
+function runCode() {
+  if (!currentCode) return;
+  var frame = document.getElementById('preview-frame');
+  var html = '';
+  if (currentLang === 'html') {
+    html = currentCode;
+  } else if (currentLang === 'javascript' || currentLang === 'js') {
+    html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:20px}</style></head><body><script>' + currentCode + '<\/script></body></html>';
+  } else if (currentLang === 'css') {
+    html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + currentCode + '</style></head><body style="padding:20px"><div class="demo">CSS Preview</div></body></html>';
+  } else {
+    html = '<!DOCTYPE html><html><head><style>body{background:#1a1a2e;padding:20px}pre{color:#a5f3a0;font-family:monospace;font-size:13px;white-space:pre-wrap}</style></head><body><pre>' + currentCode.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre></body></html>';
+  }
+  frame.srcdoc = html;
+  switchTab('preview');
+  setStatus('يعمل ▶', 'ok');
+}
+
+function copyCode() {
+  if (!currentCode) return;
+  navigator.clipboard.writeText(currentCode).then(function() {
+    var btn = document.getElementById('copy-btn');
+    btn.textContent = 'تم النسخ ✓';
+    setTimeout(function(){ btn.textContent = 'نسخ الكود'; }, 2000);
+  });
+}
+
+function setStatus(msg, cls) {
+  var el = document.getElementById('toolbar-status');
+  el.textContent = msg;
+  el.className = cls || '';
+}
+
+function detectLang(code) {
+  if (/<(!DOCTYPE|html|body|head|div|canvas|style|script)/i.test(code)) return 'html';
+  if (/^(def |import |from |class |print\()/m.test(code)) return 'python';
+  if (/(function |const |let |var |=>|document\.|window\.)/.test(code)) return 'javascript';
+  return 'code';
+}
+
+function extractCode(text) {
+  var m = text.match(/```(\w+)?\n?([\s\S]*?)```/);
+  if (m) return { lang: (m[1] || '').toLowerCase(), code: m[2].trim() };
+  return null;
+}
+
+function addMessage(text, type) {
+  var msgs = document.getElementById('messages');
+  var div = document.createElement('div');
+  div.className = 'msg ' + type;
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function addThinking() {
+  var msgs = document.getElementById('messages');
+  var div = document.createElement('div');
+  div.className = 'msg ai thinking';
+  div.innerHTML = 'جاري التفكير <div class="dot-anim"><span></span><span></span><span></span></div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+async function sendMsg() {
+  var btn = document.getElementById('send-btn');
+  var promptEl = document.getElementById('prompt');
+  var text = promptEl.value.trim();
+  if (!text || btn.disabled) return;
+
+  addMessage(text, 'user');
+  history.push({ role: 'user', content: text });
+  promptEl.value = '';
+  btn.disabled = true;
+  setStatus('يفكر...', '');
+
+  var loader = addThinking();
+
+  try {
+    var res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: history })
+    });
+
+    var data = await res.json();
+    loader.remove();
+
+    if (data.error) {
+      addMessage('خطأ: ' + (data.error.message || data.error), 'ai');
+      setStatus('خطأ', 'err');
+      history.pop();
+      btn.disabled = false;
+      return;
+    }
+
+    var reply = data.content && data.content[0] ? data.content[0].text : '';
+    history.push({ role: 'assistant', content: reply });
+
+    var extracted = extractCode(reply);
+    if (extracted) {
+      currentCode = extracted.code;
+      currentLang = extracted.lang || detectLang(extracted.code);
+      var desc = reply.replace(/```[\s\S]*?```/g, '').trim();
+      if (desc) addMessage(desc, 'ai');
+      document.getElementById('empty-state').style.display = 'none';
+      var editor = document.getElementById('code-editor');
+      editor.style.display = 'block';
+      editor.value = currentCode;
+      document.getElementById('lang-pill').textContent = currentLang;
+      setStatus('جاهز للتشغيل', 'ok');
+      runCode();
+    } else {
+      addMessage(reply, 'ai');
+      setStatus('جاهز', '');
+    }
+
+  } catch (e) {
+    loader.remove();
+    addMessage('خطأ في الاتصال بالخادم.', 'ai');
+    setStatus('خطأ', 'err');
+    history.pop();
+  }
+
+  btn.disabled = false;
+}
+
+document.getElementById('prompt').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+});
+
+switchTab('code');
+</script>
+</body>
+</html>
